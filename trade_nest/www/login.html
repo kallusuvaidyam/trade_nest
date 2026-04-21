@@ -1,0 +1,6 @@
+{% if frappe.session.user != "Guest" %}
+<script>window.location.replace('/shop');</script>
+{% else %}
+<script>window.location.replace('/shop#/login');</script>
+{% endif %}
+

@@ -1,0 +1,77 @@
+{
+ "app": "trade_nest",
+ "creation": "2026-04-20 13:17:02.022795",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "alarm-clock-check",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "codesandbox",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Trade Nest",
+   "link_to": "Trade Nest",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "TN Vendor Item",
+   "link_to": "TN Vendor Item",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "TN Order",
+   "link_to": "TN Order",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "TN Commission",
+   "link_to": "TN Commission",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "TN Vendor Payout",
+   "link_to": "TN Vendor Payout",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-04-20 18:27:49.445049",
+ "modified_by": "Administrator",
+ "module": "Trade Nest",
+ "name": "Trade Nest",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Trade Nest"
+}

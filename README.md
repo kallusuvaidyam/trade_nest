@@ -1,33 +1,52 @@
-### Trade Nest
+# TradeNest
 
-Trade Nest
+Multi-vendor marketplace built on Frappe/ERPNext. Customers can browse products, place orders (COD/Online), and track their orders via a Vue 3 storefront.
 
-### Installation
+## Requirements
 
-You can install this app using the [bench](https://github.com/frappe/bench) CLI:
+- Frappe v16
+- ERPNext v16
+- Node.js 18+
+- Python 3.11+
+
+## Installation
 
 ```bash
-cd $PATH_TO_YOUR_BENCH
-bench get-app $URL_OF_THIS_REPO --branch version-16
+cd $YOUR_BENCH
+bench get-app https://github.com/YOUR_USERNAME/trade_nest --branch version-16
 bench install-app trade_nest
 ```
 
-### Contributing
-
-This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
+## Frontend Build
 
 ```bash
 cd apps/trade_nest
-pre-commit install
+npm install
+npm run build
+bench build --app trade_nest
 ```
 
-Pre-commit is configured to use the following tools for checking and formatting your code:
+## Configuration (site_config.json)
 
-- ruff
-- eslint
-- prettier
-- pyupgrade
+Razorpay keys bench ke `sites/your-site/site_config.json` mein daalo — **kabhi code mein mat daalo**:
 
-### License
+```json
+{
+  "razorpay_key_id": "rzp_live_XXXXXXXXXX",
+  "razorpay_key_secret": "your_secret_here"
+}
+```
 
-mit
+## Custom Fields Required
+
+`bench migrate` run karne par ye fields auto-create ho jaayenge:
+
+- `Sales Order.custom_payment_method` — Select (COD / Online)
+
+## Access
+
+Storefront URL: `https://your-site/shop/`
+
+## License
+
+MIT

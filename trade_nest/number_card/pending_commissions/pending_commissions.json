@@ -1,0 +1,18 @@
+{
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "Number Card",
+ "document_type": "TN Commission",
+ "aggregate_function_based_on": "amount",
+ "filters_json": "[{\"fieldname\": \"status\", \"operator\": \"=\", \"value\": \"Pending\"}]",
+ "function": "Sum",
+ "is_public": 1,
+ "label": "Pending Commissions",
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trade Nest",
+ "name": "Pending Commissions",
+ "owner": "Administrator",
+ "show_percentage_stats": 1,
+ "stats_time_interval": "Monthly",
+ "type": "Document Type"
+}

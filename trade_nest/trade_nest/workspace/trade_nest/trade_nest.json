@@ -1,0 +1,85 @@
+{
+ "app": "trade_nest",
+ "charts": [],
+ "content": "[{\"id\":\"8mLTOXK0tn\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Overview</span>\",\"col\":12}},{\"id\":\"LA5tcmGndT\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"My Products\",\"col\":3}},{\"id\":\"9MX5lktah6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Orders\",\"col\":3}},{\"id\":\"-HKIlC8hJm\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Orders\",\"col\":3}},{\"id\":\"XNctWdN8bX\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Commission Earned\",\"col\":3}},{\"id\":\"Qj_KusFPS2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Commissions\",\"col\":3}},{\"id\":\"i70AB9Rkjk\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"u7AOJbnI0m\",\"type\":\"paragraph\",\"data\":{\"text\":\"Quick Access\",\"col\":12}},{\"id\":\"Bh7svgnshY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tn Vendor Item\",\"col\":3}},{\"id\":\"cxzohPe4nF\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tn Order\",\"col\":3}},{\"id\":\"zmxQy4SPcn\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Tn Commission\",\"col\":3}},{\"id\":\"dNHrnvhuxJ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vendor Sales Report\",\"col\":3}},{\"id\":\"RW6McFSXGg\",\"type\":\"paragraph\",\"data\":{\"text\":\"Hii hkk jjmkjnllookllll\",\"col\":12}}]",
+ "creation": "2026-04-20 13:17:02.010073",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "alarm-clock-check",
+ "idx": 3,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Trade Nest",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-04-20 17:58:27.484445",
+ "modified_by": "Administrator",
+ "module": "Trade Nest",
+ "name": "Trade Nest",
+ "number_cards": [
+  {
+   "label": "My Products",
+   "number_card_name": "My Products"
+  },
+  {
+   "label": "Total Orders",
+   "number_card_name": "Total Orders"
+  },
+  {
+   "label": "Pending Orders",
+   "number_card_name": "Pending Orders"
+  },
+  {
+   "label": "Commission Earned",
+   "number_card_name": "Commission Earned"
+  },
+  {
+   "label": "Pending Commissions",
+   "number_card_name": "Pending Commissions"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "Trade Nest",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Tn Vendor Item",
+   "link_to": "TN Vendor Item",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Tn Order",
+   "link_to": "TN Order",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Tn Commission",
+   "link_to": "TN Commission",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Vendor Sales Report",
+   "link_to": "Vendor Sales Report",
+   "report_ref_doctype": "TN Order",
+   "type": "Report"
+  }
+ ],
+ "title": "Trade Nest",
+ "type": "Workspace"
+}
