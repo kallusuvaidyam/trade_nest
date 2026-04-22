@@ -8,6 +8,224 @@ from frappe import _
 from frappe.utils.file_manager import save_file
 
 
+
+# ─── OTP Verification ────────────────────────────────────────────────────────
+# REPLACE existing send_otp and verify_otp with these
+
+@frappe.whitelist(allow_guest=True)
+def send_otp(email):
+    import random
+
+    email = (email or "").strip().lower()
+    if not email:
+        frappe.throw("Email is required.")
+
+    otp = str(random.randint(100000, 999999))
+    frappe.cache().set_value(f"otp:{email}", otp, expires_in_sec=300)
+
+    frappe.sendmail(
+        recipients=[email],
+        subject="Your OTP - TradeNest",
+        message=f"""
+        <div style="font-family:sans-serif;max-width:400px;margin:0 auto">
+          <h2 style="color:#5b4fcf">TradeNest Verification</h2>
+          <p>Your one-time password (OTP) is:</p>
+          <div style="font-size:2rem;font-weight:800;letter-spacing:0.3rem;color:#1a1a2e;padding:1rem;background:#f5f2ff;border-radius:10px;text-align:center">{otp}</div>
+          <p style="color:#888;font-size:0.85rem;margin-top:1rem">This OTP expires in 5 minutes. Do not share it with anyone.</p>
+        </div>
+        """,
+        now=True
+    )
+
+    return {"success": True}
+
+
+@frappe.whitelist(allow_guest=True)
+def verify_otp(email, otp):
+    email = (email or "").strip().lower()
+    saved = frappe.cache().get_value(f"otp:{email}")
+
+    if not saved or saved != str(otp).strip():
+        frappe.throw("Invalid or expired OTP. Please try again.")
+
+    # Clear OTP after successful verification
+    frappe.cache().delete_value(f"otp:{email}")
+
+    return {"success": True}
+
+
+# ─── Signup ───────────────────────────────────────────────────────────────────
+# REPLACE existing signup_customer with this (adds phone for Customer too)
+
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def signup_customer(
+    email,
+    full_name,
+    password,
+    account_type="Customer",
+    vendor_name=None,
+    store_name=None,
+    phone=None,
+    gst_number=None,
+    address=None,
+    store_description=None,
+    bank_account_name=None,
+    bank_name=None,
+    bank_account_number=None,
+    ifsc_code=None,
+):
+    if frappe.session.user != "Guest":
+        return {"success": True, "already_logged_in": True}
+
+    email = (email or "").strip().lower()
+    full_name = (full_name or "").strip()
+    password = password or ""
+    account_type = (account_type or "Customer").strip().title()
+
+    if not email or not full_name or not password:
+        frappe.throw(_("Full name, email, and password are required."))
+
+    if len(password) < 8:
+        frappe.throw(_("Password must be at least 8 characters long."))
+
+    if account_type not in {"Customer", "Vendor"}:
+        frappe.throw(_("Please choose a valid account type."))
+
+    if frappe.db.exists("User", email):
+        frappe.throw(_("An account with this email already exists."))
+
+    vendor_data = _build_vendor_signup_data(
+        full_name=full_name,
+        vendor_name=vendor_name,
+        store_name=store_name,
+        phone=phone,
+        gst_number=gst_number,
+        address=address,
+        store_description=store_description,
+        bank_account_name=bank_account_name,
+        bank_name=bank_name,
+        bank_account_number=bank_account_number,
+        ifsc_code=ifsc_code,
+    )
+
+    if account_type == "Vendor" and (not vendor_data["store_name"] or not vendor_data["phone"]):
+        frappe.throw(_("Store name and phone number are required for vendor registration."))
+
+    # Normalize customer phone too
+    customer_phone = ""
+    if account_type == "Customer" and phone:
+        try:
+            customer_phone = _normalize_india_phone(phone)
+        except Exception:
+            customer_phone = ""
+
+    first_name, _sep, last_name = full_name.partition(" ")
+    user = frappe.get_doc({
+        "doctype": "User",
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+        "full_name": full_name,
+        "enabled": 1,
+        "send_welcome_email": 0,
+        "user_type": "Website User",
+        "new_password": password,
+        "mobile_no": vendor_data["phone"] if account_type == "Vendor" else customer_phone,
+    })
+    user.flags.ignore_permissions = True
+    user.insert()
+
+    if frappe.db.exists("Role", account_type):
+        user.add_roles(account_type)
+
+    if account_type == "Vendor":
+        vendor = frappe.new_doc("TN Vendor")
+        vendor.vendor_name = vendor_data["vendor_name"]
+        vendor.store_name = vendor_data["store_name"]
+        vendor.user = user.name
+        vendor.email = user.email
+        vendor.phone = vendor_data["phone"]
+        vendor.gst_number = vendor_data["gst_number"]
+        vendor.address = vendor_data["address"]
+        vendor.store_description = vendor_data["store_description"]
+        vendor.bank_account_name = vendor_data["bank_account_name"]
+        vendor.bank_name = vendor_data["bank_name"]
+        vendor.bank_account_number = vendor_data["bank_account_number"]
+        vendor.ifsc_code = vendor_data["ifsc_code"]
+        vendor.status = "Pending"
+        vendor.commission_rate = 10
+        vendor.insert(ignore_permissions=True)
+
+        # Handle store image uploads
+        files = frappe.request.files.getlist("store_images") if hasattr(frappe.request, "files") else []
+        for i, file in enumerate(files[:3]):
+            content = file.stream.read()
+            if content:
+                file_doc = save_file(
+                    file.filename or f"store_image_{i+1}",
+                    content,
+                    "TN Vendor",
+                    vendor.name,
+                    folder="Home/Attachments",
+                    is_private=0,
+                )
+                if i == 0:
+                    frappe.db.set_value("TN Vendor", vendor.name, "store_logo", file_doc.file_url)
+
+        return {
+            "success": True,
+            "account_type": account_type,
+            "message": _("Vendor account created successfully. Your application is under review."),
+            "vendor": vendor.name,
+        }
+    
+    frappe.local.login_manager.login_as(user.name)
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "account_type": account_type,
+        "message": _("Account created successfully. Please log in."),
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def check_email_exists(email):
+    email = (email or "").strip().lower()
+    if frappe.db.exists("User", email):
+        frappe.throw(_("An account with this email already exists."))
+    return {"available": True}
+
+
+# ─── OTP Verification ────────────────────────────────────────────────────────────────────
+@frappe.whitelist(allow_guest=True)
+def send_otp(email):
+    import random
+
+    otp = str(random.randint(100000, 999999))
+
+    frappe.cache().set_value(f"otp:{email}", otp, expires_in_sec=300)
+
+    frappe.sendmail(
+        recipients=[email],
+        subject="Your OTP - TradeNest",
+        message=f"Your OTP is <b>{otp}</b>",
+        now=True
+    )
+
+    return {"success": True}
+
+
+@frappe.whitelist(allow_guest=True)
+def verify_otp(email, otp):
+    saved = frappe.cache().get_value(f"otp:{email}")
+
+    if not saved or saved != otp:
+        frappe.throw("Invalid OTP")
+
+    return {"success": True}
+
+
 # ─── Items ────────────────────────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=False)
