@@ -652,8 +652,6 @@ async function customerSendOtp() {
 	try {
 		await api.checkEmailExists(email.value.trim().toLowerCase());
 		await api.checkPhoneExists(phone.value);
-		await api.checkGstExists(gstNumber.value);
-		await api.checkBankExists(bankAccountNumber.value);
 		await api.sendOtp(email.value.trim().toLowerCase());
 		resetOtp();
 		startCooldown();
@@ -714,6 +712,8 @@ async function handleCustomerSignup() {
 // ── Vendor flow ───────────────────────────────────────────
 async function vendorNext(step) {
 	error.value = "";
+
+	// ✅ STEP 1 (only email + phone)
 	if (step === 1) {
 		if (!fullName.value.trim() || !email.value.trim() || phone.value.length < 10) {
 			error.value = "Please fill all fields correctly.";
@@ -725,10 +725,12 @@ async function vendorNext(step) {
 		try {
 			await api.checkEmailExists(email.value.trim().toLowerCase());
 			await api.checkPhoneExists(phone.value);
-			await api.checkGstExists(gstNumber.value);
-			await api.checkBankExists(bankAccountNumber.value);
-			await vendorSendOtp();
 
+			// ❌ REMOVE THESE
+			// await api.checkGstExists(gstNumber.value);
+			// await api.checkBankExists(bankAccountNumber.value);
+
+			await vendorSendOtp();
 			vendorStep.value = 2;
 		} catch (e) {
 			error.value = e.message || "Failed to proceed.";
@@ -738,6 +740,8 @@ async function vendorNext(step) {
 
 		return;
 	}
+
+	// ✅ STEP 3 (GST validation here)
 	if (step === 3) {
 		error.value = "";
 
@@ -752,11 +756,17 @@ async function vendorNext(step) {
 		}
 
 		loading.value = true;
+
 		try {
 			await api.checkVendorDetails({
 				vendor_name: vendorName.value.trim(),
 				store_name: storeName.value.trim(),
 			});
+
+			// ✅ GST CHECK (correct place)
+			if (gstNumber.value) {
+				await api.checkGstExists(gstNumber.value);
+			}
 
 			vendorStep.value = 4;
 		} catch (e) {
@@ -814,11 +824,25 @@ async function vendorVerifyOtp() {
 async function handleVendorSignup() {
 	error.value = "";
 	success.value = "";
+
+	// ✅ BANK CHECK (Step 4)
+	try {
+		if (bankAccountNumber.value) {
+			await api.checkBankExists(bankAccountNumber.value);
+		}
+	} catch (e) {
+		error.value = e.message;
+		return;
+	}
+
+	// existing password validation
 	if (!password.value || password.value.length < 8) {
 		error.value = "Password must be at least 8 characters.";
 		return;
 	}
+
 	loading.value = true;
+
 	try {
 		const formData = new FormData();
 		formData.append("email", email.value.trim().toLowerCase());
@@ -835,7 +859,9 @@ async function handleVendorSignup() {
 		formData.append("bank_name", bankName.value);
 		formData.append("bank_account_number", bankAccountNumber.value);
 		formData.append("ifsc_code", ifscCode.value);
+
 		storeImages.value.forEach((file) => formData.append("store_images", file));
+
 		const res = await api.signup(formData);
 
 		if (res.account_type === "Vendor") {
@@ -843,6 +869,7 @@ async function handleVendorSignup() {
 		} else {
 			router.push("/shop#/");
 		}
+
 		window.location.reload();
 	} catch (e) {
 		error.value = e.message || "Network error. Please try again.";
