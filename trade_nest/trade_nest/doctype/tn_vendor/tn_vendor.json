@@ -1,31 +1,21 @@
 {
  "actions": [],
  "autoname": "field:vendor_name",
- "creation": "2024-01-01 00:00:00",
+ "creation": "2026-04-21 20:57:43.683534",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "vendor_name",
   "user",
-  "email",
   "column_break_yarp",
+  "email",
   "phone",
-  "store_name",
   "column_break_uskr",
   "status",
-  "section_store",
-  "store_description",
-  "store_logo",
   "section_financial",
   "gst_number",
   "column_break_just",
   "commission_rate",
-  "section_bank",
-  "bank_account_name",
-  "bank_name",
-  "column_break_pndt",
-  "bank_account_number",
-  "ifsc_code",
   "section_address",
   "address",
   "section_stats",
@@ -33,7 +23,18 @@
   "fraud_flags",
   "column_break_hjtc",
   "total_commission_paid",
-  "pending_commission"
+  "pending_commission",
+  "store_info_tab",
+  "store_name",
+  "store_description",
+  "store_logo",
+  "bank_details_tab",
+  "section_bank",
+  "bank_account_name",
+  "bank_name",
+  "column_break_pndt",
+  "bank_account_number",
+  "ifsc_code"
  ],
  "fields": [
   {
@@ -47,7 +48,6 @@
   {
    "fieldname": "store_name",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Store Name"
   },
   {
@@ -66,7 +66,7 @@
   {
    "default": "+91",
    "fieldname": "phone",
-   "fieldtype": "Phone",
+   "fieldtype": "Data",
    "label": "Phone"
   },
   {
@@ -79,19 +79,15 @@
    "options": "Pending\nApproved\nSuspended\nRejected"
   },
   {
-   "fieldname": "section_store",
-   "fieldtype": "Section Break",
-   "label": "Store Info"
-  },
-  {
    "fieldname": "store_description",
    "fieldtype": "Text",
    "label": "Store Description"
   },
   {
    "fieldname": "store_logo",
-   "fieldtype": "Attach Image",
-   "label": "Store Logo"
+   "fieldtype": "Table",
+   "label": "Store Logo",
+   "options": "Store Logo"
   },
   {
    "fieldname": "section_financial",
@@ -193,10 +189,20 @@
   {
    "fieldname": "column_break_hjtc",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "store_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "Store Info"
+  },
+  {
+   "fieldname": "bank_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Bank Details"
   }
  ],
  "links": [],
- "modified": "2026-04-21 14:08:18.827710",
+ "modified": "2026-04-23 08:40:05.629754",
  "modified_by": "Administrator",
  "module": "Trade Nest",
  "name": "TN Vendor",

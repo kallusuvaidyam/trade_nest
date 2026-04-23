@@ -3,11 +3,30 @@ import json
 import hmac
 import hashlib
 import re
-from frappe.utils import today, add_days
+from frappe.utils import today as _today, add_days
 from frappe import _
 from frappe.utils.file_manager import save_file
 
+@frappe.whitelist(allow_guest=True)
+def check_phone_exists(phone):
+    phone = _normalize_india_phone(phone)
 
+    if frappe.db.exists("User", {"mobile_no": phone}):
+        frappe.throw("Phone number already registered.")
+
+    return {"available": True}
+
+@frappe.whitelist(allow_guest=True)
+def check_vendor_details(vendor_name=None, store_name=None):
+    if vendor_name:
+        if frappe.db.exists("TN Vendor", {"vendor_name": vendor_name.strip()}):
+            frappe.throw("Business name already exists.")
+
+    if store_name:
+        if frappe.db.exists("TN Vendor", {"store_name": store_name.strip()}):
+            frappe.throw("Store name already exists.")
+
+    return {"available": True}
 
 # ─── OTP Verification ────────────────────────────────────────────────────────
 # REPLACE existing send_otp and verify_otp with these
@@ -106,12 +125,20 @@ def signup_customer(
         bank_name=bank_name,
         bank_account_number=bank_account_number,
         ifsc_code=ifsc_code,
+        validate_required=(account_type == "Vendor"),
     )
 
-    if account_type == "Vendor" and (not vendor_data["store_name"] or not vendor_data["phone"]):
-        frappe.throw(_("Store name and phone number are required for vendor registration."))
+    if account_type == "Vendor":
 
-    # Normalize customer phone too
+        # GST UNIQUE CHECK
+        if vendor_data["gst_number"]:
+            if frappe.db.exists("TN Vendor", {"gst_number": vendor_data["gst_number"]}):
+                frappe.throw("GST number already registered.")
+
+        if vendor_data["bank_account_number"]:
+            if frappe.db.exists("TN Vendor", {"bank_account_number": vendor_data["bank_account_number"]}):
+                frappe.throw("Bank account number already registered.")
+
     customer_phone = ""
     if account_type == "Customer" and phone:
         try:
@@ -138,6 +165,7 @@ def signup_customer(
     if frappe.db.exists("Role", account_type):
         user.add_roles(account_type)
 
+    vendor = None
     if account_type == "Vendor":
         vendor = frappe.new_doc("TN Vendor")
         vendor.vendor_name = vendor_data["vendor_name"]
@@ -156,7 +184,6 @@ def signup_customer(
         vendor.commission_rate = 10
         vendor.insert(ignore_permissions=True)
 
-        # Handle store image uploads
         files = frappe.request.files.getlist("store_images") if hasattr(frappe.request, "files") else []
         for i, file in enumerate(files[:3]):
             content = file.stream.read()
@@ -172,22 +199,99 @@ def signup_customer(
                 if i == 0:
                     frappe.db.set_value("TN Vendor", vendor.name, "store_logo", file_doc.file_url)
 
-        return {
-            "success": True,
-            "account_type": account_type,
-            "message": _("Vendor account created successfully. Your application is under review."),
-            "vendor": vendor.name,
-        }
-    
     frappe.local.login_manager.login_as(user.name)
     frappe.db.commit()
 
     return {
         "success": True,
         "account_type": account_type,
-        "message": _("Account created successfully. Please log in."),
+        "message": _("Account created successfully."),
+        "vendor": vendor.name if vendor else None,
     }
 
+
+@frappe.whitelist(allow_guest=False)
+def register_as_vendor(
+    vendor_name,
+    store_name,
+    phone,
+    gst_number="",
+    address="",
+    store_description="",
+    bank_account_name="",
+    bank_name="",
+    bank_account_number="",
+    ifsc_code="",
+):
+    user = frappe.session.user
+    user_doc = frappe.get_doc("User", user)
+
+    if frappe.db.exists("TN Vendor", {"user": user}):
+        frappe.throw("You are already registered as a vendor.")
+
+    vendor_data = _build_vendor_signup_data(
+        full_name=user_doc.full_name,
+        vendor_name=vendor_name,
+        store_name=store_name,
+        phone=phone,
+        gst_number=gst_number,
+        address=address,
+        store_description=store_description,
+        bank_account_name=bank_account_name,
+        bank_name=bank_name,
+        bank_account_number=bank_account_number,
+        ifsc_code=ifsc_code,
+        validate_required=True,
+    )
+
+    vendor = frappe.new_doc("TN Vendor")
+    vendor.vendor_name = vendor_data["vendor_name"]
+    vendor.store_name = vendor_data["store_name"]
+    vendor.user = user
+    vendor.email = user_doc.email
+    vendor.phone = vendor_data["phone"]
+    vendor.gst_number = vendor_data["gst_number"]
+    vendor.address = vendor_data["address"]
+    vendor.store_description = vendor_data["store_description"]
+    vendor.bank_account_name = vendor_data["bank_account_name"]
+    vendor.bank_name = vendor_data["bank_name"]
+    vendor.bank_account_number = vendor_data["bank_account_number"]
+    vendor.ifsc_code = vendor_data["ifsc_code"]
+    vendor.status = "Pending"
+    vendor.commission_rate = 10
+    vendor.insert(ignore_permissions=True)
+
+    frappe.sendmail(
+        recipients=[user_doc.email],
+        subject="Vendor Registration Received - Trade Nest",
+        message=f"""
+        <h2>Thank you for registering as a Vendor!</h2>
+        <p>Dear {vendor_data["vendor_name"]},</p>
+        <p>We have received your vendor registration request for <b>{vendor_data["store_name"]}</b>.</p>
+        <p>Our team will review your application and get back to you within 24-48 hours.</p>
+        <p>You will receive an email once your account is approved.</p>
+        <br><p>- Trade Nest Team</p>
+        """,
+        now=True
+    )
+
+    admin_email = frappe.db.get_value("User", "Administrator", "email")
+    if admin_email:
+        frappe.sendmail(
+            recipients=[admin_email],
+            subject=f"New Vendor Registration: {vendor_data['vendor_name']}",
+            message=f"""
+            <h2>New Vendor Registration</h2>
+            <p><b>Vendor Name:</b> {vendor_data["vendor_name"]}</p>
+            <p><b>Store Name:</b> {vendor_data["store_name"]}</p>
+            <p><b>Email:</b> {user_doc.email}</p>
+            <p><b>Phone:</b> {vendor_data["phone"]}</p>
+            <p>Please review and approve/reject in the <a href="/app/tn-vendor/{vendor.name}">Trade Nest Admin</a>.</p>
+            """,
+            now=True
+        )
+
+    return {"success": True, "vendor": vendor.name, "status": "Pending"}
 
 @frappe.whitelist(allow_guest=True)
 def check_email_exists(email):
@@ -197,33 +301,20 @@ def check_email_exists(email):
     return {"available": True}
 
 
-# ─── OTP Verification ────────────────────────────────────────────────────────────────────
 @frappe.whitelist(allow_guest=True)
-def send_otp(email):
-    import random
-
-    otp = str(random.randint(100000, 999999))
-
-    frappe.cache().set_value(f"otp:{email}", otp, expires_in_sec=300)
-
-    frappe.sendmail(
-        recipients=[email],
-        subject="Your OTP - TradeNest",
-        message=f"Your OTP is <b>{otp}</b>",
-        now=True
-    )
-
-    return {"success": True}
+def check_gst_exists(gst):
+    gst = (gst or "").strip().upper()
+    if gst and frappe.db.exists("TN Vendor", {"gst_number": gst}):
+        frappe.throw("GST number already registered.")
+    return {"available": True}
 
 
 @frappe.whitelist(allow_guest=True)
-def verify_otp(email, otp):
-    saved = frappe.cache().get_value(f"otp:{email}")
-
-    if not saved or saved != otp:
-        frappe.throw("Invalid OTP")
-
-    return {"success": True}
+def check_bank_exists(acc):
+    acc = (acc or "").strip()
+    if acc and frappe.db.exists("TN Vendor", {"bank_account_number": acc}):
+        frappe.throw("Bank account number already registered.")
+    return {"available": True}
 
 
 # ─── Items ────────────────────────────────────────────────────────────────────
@@ -288,7 +379,6 @@ def get_items(page=1, page_length=12, search="", category="", vendor=""):
     total_values = {k: v for k, v in values.items() if k not in ("limit_start", "page_length")}
     total = frappe.db.sql(total_query, total_values)[0][0]
 
-    import re
     for item in items:
         for field in ("image", "store_logo"):
             if item.get(field):
@@ -437,11 +527,21 @@ def _build_vendor_signup_data(
     bank_name=None,
     bank_account_number=None,
     ifsc_code=None,
+    validate_required=False,   # ← flag add karo
 ):
+    store_name = (store_name or "").strip()
+    normalized_phone = _normalize_india_phone(phone) if phone else ""
+
+    if validate_required:
+        if not store_name:
+            frappe.throw(_("Store name is required for vendor registration."))
+        if not normalized_phone:
+            frappe.throw(_("Phone number is required for vendor registration."))
+
     return {
         "vendor_name": (vendor_name or full_name or "").strip(),
-        "store_name": (store_name or "").strip(),
-        "phone": _normalize_india_phone(phone),
+        "store_name": store_name,
+        "phone": normalized_phone,
         "gst_number": (gst_number or "").strip().upper(),
         "address": (address or "").strip(),
         "store_description": (store_description or "").strip(),
@@ -450,114 +550,6 @@ def _build_vendor_signup_data(
         "bank_account_number": re.sub(r"\s+", "", (bank_account_number or "").strip()),
         "ifsc_code": (ifsc_code or "").strip().upper(),
     }
-
-
-@frappe.whitelist(allow_guest=True, methods=["POST"])
-def signup_customer(
-    email,
-    full_name,
-    password,
-    account_type="Customer",
-    vendor_name=None,
-    store_name=None,
-    phone=None,
-    gst_number=None,
-    address=None,
-    store_description=None,
-    bank_account_name=None,
-    bank_name=None,
-    bank_account_number=None,
-    ifsc_code=None,
-):
-    if frappe.session.user != "Guest":
-        return {"success": True, "already_logged_in": True}
-
-    email = (email or "").strip().lower()
-    full_name = (full_name or "").strip()
-    password = password or ""
-    account_type = (account_type or "Customer").strip().title()
-
-    if not email or not full_name or not password:
-        frappe.throw(_("Full name, email, and password are required."))
-
-    if len(password) < 8:
-        frappe.throw(_("Password must be at least 8 characters long."))
-
-    if account_type not in {"Customer", "Vendor"}:
-        frappe.throw(_("Please choose a valid account type."))
-
-    if frappe.db.exists("User", email):
-        frappe.throw(_("An account with this email already exists."))
-
-    vendor_data = _build_vendor_signup_data(
-        full_name=full_name,
-        vendor_name=vendor_name,
-        store_name=store_name,
-        phone=phone,
-        gst_number=gst_number,
-        address=address,
-        store_description=store_description,
-        bank_account_name=bank_account_name,
-        bank_name=bank_name,
-        bank_account_number=bank_account_number,
-        ifsc_code=ifsc_code,
-    )
-
-    if account_type == "Vendor" and (not vendor_data["store_name"] or not vendor_data["phone"]):
-        frappe.throw(_("Store name and phone number are required for vendor registration."))
-
-    first_name, _sep, last_name = full_name.partition(" ")
-    user = frappe.get_doc(
-        {
-            "doctype": "User",
-            "email": email,
-            "first_name": first_name,
-            "last_name": last_name,
-            "full_name": full_name,
-            "enabled": 1,
-            "send_welcome_email": 0,
-            "user_type": "Website User",
-            "new_password": password,
-            "mobile_no": vendor_data["phone"] if account_type == "Vendor" else "",
-        }
-    )
-    user.flags.ignore_permissions = True
-    user.insert()
-
-    if frappe.db.exists("Role", account_type):
-        user.add_roles(account_type)
-
-    if account_type == "Vendor":
-        vendor = frappe.new_doc("TN Vendor")
-        vendor.vendor_name = vendor_data["vendor_name"]
-        vendor.store_name = vendor_data["store_name"]
-        vendor.user = user.name
-        vendor.email = user.email
-        vendor.phone = vendor_data["phone"]
-        vendor.gst_number = vendor_data["gst_number"]
-        vendor.address = vendor_data["address"]
-        vendor.store_description = vendor_data["store_description"]
-        vendor.bank_account_name = vendor_data["bank_account_name"]
-        vendor.bank_name = vendor_data["bank_name"]
-        vendor.bank_account_number = vendor_data["bank_account_number"]
-        vendor.ifsc_code = vendor_data["ifsc_code"]
-        vendor.status = "Pending"
-        vendor.commission_rate = 10
-        vendor.insert(ignore_permissions=True)
-
-        return {
-            "success": True,
-            "account_type": account_type,
-            "message": _("Vendor account created successfully. Please log in."),
-            "vendor": vendor.name,
-        }
-
-    return {
-        "success": True,
-        "account_type": account_type,
-        "message": _("Customer account created successfully. Please log in."),
-    }
-
 
 @frappe.whitelist(allow_guest=False)
 def update_profile(full_name=None, user_image=None):
@@ -664,91 +656,6 @@ def delete_address(name):
     return {"success": True}
 
 
-# ─── Vendor Registration ───────────────────────────────────────────────────────
-
-@frappe.whitelist(allow_guest=False)
-def register_as_vendor(
-    vendor_name,
-    store_name,
-    phone,
-    gst_number="",
-    address="",
-    store_description="",
-    bank_account_name="",
-    bank_name="",
-    bank_account_number="",
-    ifsc_code="",
-):
-    user = frappe.session.user
-    user_doc = frappe.get_doc("User", user)
-
-    existing = frappe.db.exists("TN Vendor", {"user": user})
-    if existing:
-        frappe.throw("You are already registered as a vendor.")
-
-    vendor_data = _build_vendor_signup_data(
-        full_name=user_doc.full_name,
-        vendor_name=vendor_name,
-        store_name=store_name,
-        phone=phone,
-        gst_number=gst_number,
-        address=address,
-        store_description=store_description,
-        bank_account_name=bank_account_name,
-        bank_name=bank_name,
-        bank_account_number=bank_account_number,
-        ifsc_code=ifsc_code,
-    )
-
-    vendor = frappe.new_doc("TN Vendor")
-    vendor.vendor_name = vendor_data["vendor_name"]
-    vendor.store_name = vendor_data["store_name"]
-    vendor.user = user
-    vendor.email = user_doc.email
-    vendor.phone = vendor_data["phone"]
-    vendor.gst_number = vendor_data["gst_number"]
-    vendor.address = vendor_data["address"]
-    vendor.store_description = vendor_data["store_description"]
-    vendor.bank_account_name = vendor_data["bank_account_name"]
-    vendor.bank_name = vendor_data["bank_name"]
-    vendor.bank_account_number = vendor_data["bank_account_number"]
-    vendor.ifsc_code = vendor_data["ifsc_code"]
-    vendor.status = "Pending"
-    vendor.commission_rate = 10
-    vendor.insert(ignore_permissions=True)
-
-    frappe.sendmail(
-        recipients=[user_doc.email],
-        subject="Vendor Registration Received - Trade Nest",
-        message=f"""
-        <h2>Thank you for registering as a Vendor!</h2>
-        <p>Dear {vendor_name},</p>
-        <p>We have received your vendor registration request for <b>{store_name}</b>.</p>
-        <p>Our team will review your application and get back to you within 24-48 hours.</p>
-        <p>You will receive an email once your account is approved.</p>
-        <br><p>- Trade Nest Team</p>
-        """,
-        now=True
-    )
-
-    admin_email = frappe.db.get_value("User", "Administrator", "email")
-    if admin_email:
-        frappe.sendmail(
-            recipients=[admin_email],
-            subject=f"New Vendor Registration: {vendor_name}",
-            message=f"""
-            <h2>New Vendor Registration</h2>
-            <p><b>Vendor Name:</b> {vendor_data["vendor_name"]}</p>
-            <p><b>Store Name:</b> {vendor_data["store_name"]}</p>
-            <p><b>Email:</b> {user_doc.email}</p>
-            <p><b>Phone:</b> {vendor_data["phone"]}</p>
-            <p>Please review and approve/reject in the <a href="/app/tn-vendor/{vendor.name}">Trade Nest Admin</a>.</p>
-            """,
-            now=True
-        )
-
-    return {"success": True, "vendor": vendor.name, "status": "Pending"}
-
 
 # ─── Orders ───────────────────────────────────────────────────────────────────
 
@@ -838,7 +745,6 @@ def place_order(items, payment_method="COD", shipping_address="", notes=""):
 
 def _create_sales_order(order, user_doc):
     """Create and submit an ERPNext Sales Order linked to the TN Order."""
-    from frappe.utils import add_days, today as _today
 
     # Find or create ERPNext Customer
     customer_name = frappe.db.get_value("Customer", {"email_id": user_doc.email})
@@ -882,7 +788,6 @@ def _create_sales_order(order, user_doc):
 
 def _create_commission_records(order):
     """Create TN Commission records for each vendor item in the order."""
-    from frappe.utils import today as _today
     for item in order.items:
         if item.vendor and item.commission_amount:
             frappe.get_doc({

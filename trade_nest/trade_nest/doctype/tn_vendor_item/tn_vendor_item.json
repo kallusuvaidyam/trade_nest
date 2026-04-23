@@ -1,31 +1,107 @@
 {
- "actions": [],
- "autoname": "hash",
- "creation": "2024-01-01 00:00:00.000000",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": ["vendor","item_code","item_name","custom_price","commission_rate","stock_qty","is_active","description","image"],
- "fields": [
-  {"fieldname":"vendor","fieldtype":"Link","label":"Vendor","options":"TN Vendor","reqd":1,"in_list_view":1,"in_filter":1},
-  {"fieldname":"item_code","fieldtype":"Link","label":"Item","options":"Item","reqd":1,"in_list_view":1},
-  {"fieldname":"item_name","fieldtype":"Data","label":"Item Name","fetch_from":"item_code.item_name","read_only":1,"in_list_view":1},
-  {"fieldname":"custom_price","fieldtype":"Currency","label":"Selling Price","reqd":1},
-  {"fieldname":"commission_rate","fieldtype":"Percent","label":"Commission Rate (%)"},
-  {"fieldname":"stock_qty","fieldtype":"Float","label":"Stock Qty","default":"0"},
-  {"fieldname":"is_active","fieldtype":"Check","label":"Active","default":"1","in_list_view":1},
-  {"fieldname":"description","fieldtype":"Text Editor","label":"Product Description"},
-  {"fieldname":"image","fieldtype":"Attach Image","label":"Product Image"}
- ],
- "links": [],
- "modified": "2024-01-01 00:00:00.000000",
- "modified_by": "Administrator",
- "module": "Trade Nest",
- "name": "TN Vendor Item",
- "owner": "Administrator",
- "permissions": [
-  {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1},
-  {"role":"Vendor","read":1,"write":1,"create":1,"delete":1,"report":0,"if_owner":0}
- ],
- "sort_field": "modified",
- "sort_order": "DESC"
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2024-01-01 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "vendor",
+    "item_code",
+    "item_name",
+    "custom_price",
+    "commission_rate",
+    "stock_qty",
+    "is_active",
+    "description",
+    "image"
+  ],
+  "fields": [
+    {
+      "fieldname": "vendor",
+      "fieldtype": "Link",
+      "label": "Vendor",
+      "options": "TN Vendor",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_filter": 1
+    },
+    {
+      "fieldname": "item_code",
+      "fieldtype": "Link",
+      "label": "Item",
+      "options": "Item",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "item_name",
+      "fieldtype": "Data",
+      "label": "Item Name",
+      "fetch_from": "item_code.item_name",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "custom_price",
+      "fieldtype": "Currency",
+      "label": "Selling Price",
+      "reqd": 1
+    },
+    {
+      "fieldname": "commission_rate",
+      "fieldtype": "Percent",
+      "label": "Commission Rate (%)"
+    },
+    {
+      "fieldname": "stock_qty",
+      "fieldtype": "Float",
+      "label": "Stock Qty",
+      "default": "0"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Active",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Text Editor",
+      "label": "Product Description"
+    },
+    {
+      "fieldname": "image",
+      "fieldtype": "Attach Image",
+      "label": "Product Image"
+    }
+  ],
+  "links": [],
+  "modified": "2024-01-01 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Trade Nest",
+  "name": "TN Vendor Item",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    },
+    {
+      "role": "Vendor",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 0,
+      "if_owner": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC"
 }

@@ -162,6 +162,12 @@ export const api = {
 
 	checkEmailExists: (email) =>
 		request("POST", "/method/trade_nest.api.check_email_exists", { email }),
+	checkPhoneExists: (phone) =>
+		request("POST", "/method/trade_nest.api.check_phone_exists", { phone }),
+	checkGstExists: (gst) => request("POST", "/method/trade_nest.api.check_gst_exists", { gst }),
+	checkBankExists: (acc) => request("POST", "/method/trade_nest.api.check_bank_exists", { acc }),
+	checkVendorDetails: (data) =>
+		request("POST", "/method/trade_nest.api.check_vendor_details", data),
 	sendOtp: (email) => request("POST", "/method/trade_nest.api.send_otp", { email }),
 	verifyOtp: (email, otp) =>
 		request("POST", "/method/trade_nest.api.verify_otp", { email, otp }),

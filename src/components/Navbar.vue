@@ -13,7 +13,9 @@
 				<RouterLink to="/items" class="nav-link">Shop</RouterLink>
 				<RouterLink to="/cart" class="nav-link">
 					Cart
-					<span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+					<span v-if="isLoggedIn && cartCount > 0" class="cart-badge">{{
+						cartCount
+					}}</span>
 				</RouterLink>
 				<RouterLink to="/orders" class="nav-link">Orders</RouterLink>
 				<RouterLink to="/privacy-policy" class="nav-link">Privacy</RouterLink>

@@ -492,7 +492,7 @@
 </template>
 
 <script setup>
-import { computed, ref, nextTick } from "vue";
+import { computed, ref, nextTick, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { api } from "@/api/frappe";
 
@@ -651,6 +651,9 @@ async function customerSendOtp() {
 	loading.value = true;
 	try {
 		await api.checkEmailExists(email.value.trim().toLowerCase());
+		await api.checkPhoneExists(phone.value);
+		await api.checkGstExists(gstNumber.value);
+		await api.checkBankExists(bankAccountNumber.value);
 		await api.sendOtp(email.value.trim().toLowerCase());
 		resetOtp();
 		startCooldown();
@@ -694,7 +697,13 @@ async function handleCustomerSignup() {
 		formData.append("account_type", "Customer");
 		formData.append("phone", phone.value);
 		const res = await api.signup(formData);
-		router.push("/");
+
+		if (res.account_type === "Vendor") {
+			router.push("/desk");
+		} else {
+			router.push("/shop#/");
+		}
+		window.location.reload();
 	} catch (e) {
 		error.value = e.message || "Network error. Please try again.";
 	} finally {
@@ -710,30 +719,70 @@ async function vendorNext(step) {
 			error.value = "Please fill all fields correctly.";
 			return;
 		}
+
 		loading.value = true;
+
 		try {
 			await api.checkEmailExists(email.value.trim().toLowerCase());
+			await api.checkPhoneExists(phone.value);
+			await api.checkGstExists(gstNumber.value);
+			await api.checkBankExists(bankAccountNumber.value);
 			await vendorSendOtp();
+
 			vendorStep.value = 2;
-		} catch {
+		} catch (e) {
 			error.value = e.message || "Failed to proceed.";
 		} finally {
 			loading.value = false;
 		}
+
 		return;
 	}
 	if (step === 3) {
+		error.value = "";
+
 		if (!vendorName.value.trim() || !storeName.value.trim()) {
 			error.value = "Vendor name and store name are required.";
 			return;
 		}
+
 		if (storeImages.value.length !== 3) {
 			error.value = "Please upload exactly 3 store images.";
 			return;
 		}
-		vendorStep.value = 4;
+
+		loading.value = true;
+		try {
+			await api.checkVendorDetails({
+				vendor_name: vendorName.value.trim(),
+				store_name: storeName.value.trim(),
+			});
+
+			vendorStep.value = 4;
+		} catch (e) {
+			error.value = e.message || "Validation failed.";
+		} finally {
+			loading.value = false;
+		}
 	}
 }
+
+let timer;
+
+watch(storeName, (val) => {
+	clearTimeout(timer);
+
+	if (val.length < 3) return;
+
+	timer = setTimeout(async () => {
+		try {
+			await api.checkVendorDetails({ store_name: val });
+			error.value = "";
+		} catch (e) {
+			error.value = e.message;
+		}
+	}, 500);
+});
 
 async function vendorSendOtp() {
 	try {
@@ -788,7 +837,13 @@ async function handleVendorSignup() {
 		formData.append("ifsc_code", ifscCode.value);
 		storeImages.value.forEach((file) => formData.append("store_images", file));
 		const res = await api.signup(formData);
-		router.push("/");
+
+		if (res.account_type === "Vendor") {
+			router.push("/desk");
+		} else {
+			router.push("/shop#/");
+		}
+		window.location.reload();
 	} catch (e) {
 		error.value = e.message || "Network error. Please try again.";
 	} finally {
